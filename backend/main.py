@@ -99,3 +99,9 @@ def get_history():
 @app.get("/")
 def home():
     return {"message": "API is running!"}
+import os
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))  # Default to 8000 if no PORT is set
+    uvicorn.run(app, host="0.0.0.0", port=port)
