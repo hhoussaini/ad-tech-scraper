@@ -1,4 +1,4 @@
-# Use an official lightweight Python image
+# Use an official Python lightweight image
 FROM python:3.11-slim
 
 # Install dependencies
@@ -15,10 +15,14 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add
     apt-get update && apt-get install -y google-chrome-stable
 
 # Install ChromeDriver
-RUN CHROMEDRIVER_VERSION=`curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE` && \
+RUN CHROMEDRIVER_VERSION=$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE) && \
     wget -q "https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip" -O /tmp/chromedriver.zip && \
     unzip /tmp/chromedriver.zip -d /usr/local/bin/ && \
     chmod +x /usr/local/bin/chromedriver
+
+# Set environment variables
+ENV CHROME_BIN="/usr/bin/google-chrome-stable"
+ENV CHROMEDRIVER_PATH="/usr/local/bin/chromedriver"
 
 # Set the working directory
 WORKDIR /app
@@ -27,10 +31,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code
+# Copy application files
 COPY . .
 
-# Expose port 8000
+# Expose the port
 EXPOSE 8000
 
 # Start the FastAPI application
