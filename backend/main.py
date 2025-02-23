@@ -12,7 +12,7 @@ app = FastAPI()
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # You can restrict this for security
+    allow_origins=["*"],  # Replace "*" with your frontend URL for better security
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -22,10 +22,10 @@ class ScrapeResponse(BaseModel):
     url: str
     detected_technologies: dict
 
-# Set up Selenium WebDriver
+# Function to set up Selenium WebDriver
 def get_driver():
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Run in headless mode (no GUI)
+    chrome_options.add_argument("--headless")  # Run Chrome in headless mode
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     driver = webdriver.Chrome(options=chrome_options)
@@ -34,13 +34,14 @@ def get_driver():
 def scrape_technologies(url: str):
     driver = get_driver()
     driver.get(url)
-    time.sleep(5)  # Wait for JavaScript content to load
-    page_source = driver.page_source  # Get the fully loaded HTML
+    time.sleep(5)  # Allow JavaScript to load fully
+    page_source = driver.page_source
     driver.quit()
 
     soup = BeautifulSoup(page_source, "html.parser")
     detected_technologies = {}
 
+    # Known tracking tools and analytics scripts
     technologies = {
         "Google Tag Manager": "googletagmanager.com",
         "Google Analytics": "analytics.js",
@@ -54,7 +55,7 @@ def scrape_technologies(url: str):
         "Tealium": "tags.tiqcdn.com",
     }
 
-    # Check for technologies in the rendered HTML
+    # Check for technologies in the JavaScript scripts
     for script in soup.find_all("script", src=True):
         script_src = script["src"]
         for tech, keyword in technologies.items():
