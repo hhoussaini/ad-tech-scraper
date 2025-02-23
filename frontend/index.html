@@ -36,6 +36,19 @@
         }
         ul {
             text-align: left;
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background: #ffffff;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
+        }
+        #results, #history {
+            margin-top: 20px;
+            text-align: left;
         }
     </style>
     <script>
@@ -43,22 +56,32 @@
 
         async function scrapeURL() {
             const url = document.getElementById("urlInput").value;
+            if (!url) {
+                alert("Please enter a URL to scrape.");
+                return;
+            }
             document.getElementById("results").innerHTML = "<p>Loading...</p>";
+
             try {
                 const response = await fetch(`${API_BASE_URL}/scrape?url=${encodeURIComponent(url)}`);
-                if (!response.ok) throw new Error("Failed to scrape");
+                if (!response.ok) throw new Error("Failed to scrape data.");
                 const data = await response.json();
-                
+
                 let resultDiv = document.getElementById("results");
                 resultDiv.innerHTML = `<h3>Scraped Data for ${url}</h3>`;
-                let ul = document.createElement("ul");
-                for (const [tech, status] of Object.entries(data.detected_technologies)) {
-                    let li = document.createElement("li");
-                    li.textContent = `${tech}: ${status}`;
-                    ul.appendChild(li);
+
+                if (!data.detected_technologies || Object.keys(data.detected_technologies).length === 0) {
+                    resultDiv.innerHTML += "<p>No technologies detected.</p>";
+                } else {
+                    let ul = document.createElement("ul");
+                    for (const [tech, status] of Object.entries(data.detected_technologies)) {
+                        let li = document.createElement("li");
+                        li.innerHTML = `<strong>${tech}:</strong> ${status}`;
+                        ul.appendChild(li);
+                    }
+                    resultDiv.appendChild(ul);
                 }
-                resultDiv.appendChild(ul);
-                loadHistory();
+
             } catch (error) {
                 document.getElementById("results").innerHTML = `<p style='color:red;'>Error: ${error.message}</p>`;
             }
@@ -67,16 +90,22 @@
         async function loadHistory() {
             try {
                 const response = await fetch(`${API_BASE_URL}/history`);
-                if (!response.ok) throw new Error("Failed to fetch history");
+                if (!response.ok) throw new Error("Failed to fetch history.");
                 const data = await response.json();
+
                 let historyDiv = document.getElementById("history");
                 historyDiv.innerHTML = "<h3>Scraping History</h3>";
-                
-                data.history.forEach(entry => {
-                    let div = document.createElement("div");
-                    div.innerHTML = `<strong>${entry.url}</strong>: ${JSON.stringify(entry.detected_technologies)}`;
-                    historyDiv.appendChild(div);
-                });
+
+                if (!data.history || data.history.length === 0) {
+                    historyDiv.innerHTML += "<p>No history available.</p>";
+                } else {
+                    data.history.forEach(entry => {
+                        let div = document.createElement("div");
+                        div.innerHTML = `<strong>${entry.url}</strong>: ${JSON.stringify(entry.detected_technologies)}`;
+                        historyDiv.appendChild(div);
+                    });
+                }
+
             } catch (error) {
                 document.getElementById("history").innerHTML = `<p style='color:red;'>Error: ${error.message}</p>`;
             }
