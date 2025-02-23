@@ -96,9 +96,12 @@ def scrape(url: str):
 def get_history():
     return {"history": scraping_history}
 
-@app.get("/")
+from fastapi.responses import JSONResponse
+
+@app.api_route("/", methods=["GET", "HEAD"])
 def home():
-    return {"message": "API is running!"}
+    return JSONResponse(content={"message": "API is running!"})
+
 import os
 
 if __name__ == "__main__":
