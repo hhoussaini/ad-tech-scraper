@@ -31,7 +31,7 @@ COPY . .
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose port
+# Expose port 8000 (this is important)
 EXPOSE 8000
 
 # Start FastAPI server
