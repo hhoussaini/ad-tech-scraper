@@ -19,6 +19,9 @@ RUN wget -O /tmp/chromedriver.zip https://chromedriver.storage.googleapis.com/12
     && unzip /tmp/chromedriver.zip -d /usr/local/bin/ \
     && chmod +x /usr/local/bin/chromedriver
 
+# Add ChromeDriver to system path
+ENV PATH="/usr/local/bin:${PATH}"
+
 # Set the working directory
 WORKDIR /app
 
