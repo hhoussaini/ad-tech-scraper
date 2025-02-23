@@ -30,15 +30,13 @@ CHROME_BINARY_PATH = "/usr/bin/google-chrome-stable"
 
 # Function to set up Selenium WebDriver
 def get_driver():
-    chromedriver_autoinstaller.install()  # Auto-download compatible ChromeDriver
-
     chrome_options = Options()
-    chrome_options.binary_location = CHROME_BINARY_PATH  # Set the Chrome binary path
-    chrome_options.add_argument("--headless")  # Run in headless mode (no GUI)
+    chrome_options.binary_location = CHROME_BINARY_PATH  # Explicitly set Chrome path
+    chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
 
-    service = Service()  # Use default service
+    service = Service(CHROMEDRIVER_PATH)  # Specify the correct ChromeDriver path
     driver = webdriver.Chrome(service=service, options=chrome_options)
     return driver
 
