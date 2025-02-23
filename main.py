@@ -2,6 +2,9 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import requests
 from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+import time
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -19,10 +22,24 @@ class ScrapeResponse(BaseModel):
     url: str
     detected_technologies: dict
 
+# Function to set up Selenium WebDriver
+def get_driver():
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # Run Chrome in headless mode
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    driver = webdriver.Chrome(options=chrome_options)
+    return driver
+
 def scrape_technologies(url: str):
-    headers = {"User-Agent": "Mozilla/5.0"}
-    response = requests.get(url, headers=headers)
-    soup = BeautifulSoup(response.text, "html.parser")
+    driver = get_driver()
+    driver.get(url)
+    time.sleep(5)  # Wait for JavaScript to load fully
+    page_source = driver.page_source  # Get fully loaded page HTML
+    driver.quit()
+
+    soup = BeautifulSoup(page_source, "html.parser")
     detected_technologies = {}
 
     # List of known scripts and tracking tools
