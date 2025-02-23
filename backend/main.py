@@ -2,6 +2,9 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import requests
 from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+import time
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -9,7 +12,7 @@ app = FastAPI()
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # You can replace "*" with your frontend URL for better security
+    allow_origins=["*"],  # You can restrict this for security
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -19,40 +22,46 @@ class ScrapeResponse(BaseModel):
     url: str
     detected_technologies: dict
 
+# Set up Selenium WebDriver
+def get_driver():
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # Run in headless mode (no GUI)
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    driver = webdriver.Chrome(options=chrome_options)
+    return driver
+
 def scrape_technologies(url: str):
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    driver = get_driver()
+    driver.get(url)
+    time.sleep(5)  # Wait for JavaScript content to load
+    page_source = driver.page_source  # Get the fully loaded HTML
+    driver.quit()
+
+    soup = BeautifulSoup(page_source, "html.parser")
+    detected_technologies = {}
+
+    technologies = {
+        "Google Tag Manager": "googletagmanager.com",
+        "Google Analytics": "analytics.js",
+        "Facebook Pixel": "connect.facebook.net/en_US/fbevents.js",
+        "Hotjar": "static.hotjar.com",
+        "Adobe Analytics": "omtrdc.net",
+        "HubSpot": "js.hs-scripts.com",
+        "LinkedIn Insight": "snap.licdn.com",
+        "Twitter Pixel": "static.ads-twitter.com",
+        "Segment.io": "cdn.segment.com",
+        "Tealium": "tags.tiqcdn.com",
     }
-    try:
-        response = requests.get(url, headers=headers, timeout=10)  # 10s timeout
-        response.raise_for_status()  # Raise error if HTTP request fails
-        
-        detected_technologies = {}
 
-        technologies = {
-            "Google Tag Manager": "googletagmanager.com",
-            "Google Analytics": "analytics.js",
-            "Facebook Pixel": "connect.facebook.net/en_US/fbevents.js",
-            "Hotjar": "static.hotjar.com",
-            "Adobe Analytics": "omtrdc.net",
-            "HubSpot": "js.hs-scripts.com",
-            "LinkedIn Insight": "snap.licdn.com",
-            "Twitter Pixel": "static.ads-twitter.com",
-            "Segment.io": "cdn.segment.com",
-            "Tealium": "tags.tiqcdn.com",
-        }
-
-        # Check for technologies in the raw HTML
+    # Check for technologies in the rendered HTML
+    for script in soup.find_all("script", src=True):
+        script_src = script["src"]
         for tech, keyword in technologies.items():
-            if keyword in response.text:
+            if keyword in script_src:
                 detected_technologies[tech] = "Detected"
 
-        return detected_technologies
-
-    except requests.exceptions.Timeout:
-        return {"error": "Request timed out"}
-    except requests.exceptions.RequestException as e:
-        return {"error": f"Request failed: {e}"}
+    return detected_technologies
 
 @app.get("/scrape", response_model=ScrapeResponse)
 def scrape(url: str):
