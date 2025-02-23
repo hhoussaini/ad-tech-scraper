@@ -1,49 +1,41 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import requests
-from bs4 import BeautifulSoup
+from fastapi.middleware.cors import CORSMiddleware
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 import chromedriver_autoinstaller
 import time
-from fastapi.middleware.cors import CORSMiddleware
+from bs4 import BeautifulSoup
+from pydantic import BaseModel
 
 app = FastAPI()
 
-# Enable CORS
+# Enable CORS for frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change this to your frontend URL for better security
+    allow_origins=["*"],  # Change this to specific domains for better security
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Manually set the Chrome binary path for Render
-CHROME_BINARY_PATH = "/usr/bin/google-chrome-stable"
-
-# Store scraping history
-scraping_history = []
-
+# Define response model
 class ScrapeResponse(BaseModel):
     url: str
     detected_technologies: dict
 
 # Function to set up Selenium WebDriver
 def get_driver():
+    chromedriver_autoinstaller.install()  # Auto-download ChromeDriver
     chrome_options = Options()
-    chrome_options.binary_location = "/usr/bin/google-chrome-stable"  # Explicitly set Chrome binary path
+    chrome_options.binary_location = "/usr/bin/google-chrome-stable"  # Explicitly set Chrome binary
     chrome_options.add_argument("--headless")  # Run in headless mode (no GUI)
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
 
-    # Explicitly define the path to ChromeDriver
-    service = Service("/usr/local/bin/chromedriver")  
+    service = Service("/usr/local/bin/chromedriver")  # Explicit ChromeDriver path
     driver = webdriver.Chrome(service=service, options=chrome_options)
     return driver
-
-
 
 # Function to scrape technologies
 def scrape_technologies(url: str):
@@ -53,37 +45,34 @@ def scrape_technologies(url: str):
         time.sleep(5)  # Allow JavaScript to load fully
         page_source = driver.page_source
         driver.quit()
+
+        soup = BeautifulSoup(page_source, "html.parser")
+        detected_technologies = {}
+
+        # Known tracking tools and analytics scripts
+        technologies = {
+            "Google Tag Manager": "googletagmanager.com",
+            "Google Analytics": "analytics.js",
+            "Facebook Pixel": "connect.facebook.net/en_US/fbevents.js",
+            "Hotjar": "static.hotjar.com",
+            "Adobe Analytics": "omtrdc.net",
+            "HubSpot": "js.hs-scripts.com",
+            "LinkedIn Insight": "snap.licdn.com",
+            "Twitter Pixel": "static.ads-twitter.com",
+            "Segment.io": "cdn.segment.com",
+            "Tealium": "tags.tiqcdn.com",
+        }
+
+        # Check for technologies in the rendered HTML
+        for script in soup.find_all("script", src=True):
+            script_src = script["src"]
+            for tech, keyword in technologies.items():
+                if keyword in script_src:
+                    detected_technologies[tech] = "Detected"
+
+        return detected_technologies
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Selenium error: {str(e)}")
-
-    soup = BeautifulSoup(page_source, "html.parser")
-    detected_technologies = {}
-
-    # Known tracking tools and analytics scripts
-    technologies = {
-        "Google Tag Manager": "googletagmanager.com",
-        "Google Analytics": "analytics.js",
-        "Facebook Pixel": "connect.facebook.net/en_US/fbevents.js",
-        "Hotjar": "static.hotjar.com",
-        "Adobe Analytics": "omtrdc.net",
-        "HubSpot": "js.hs-scripts.com",
-        "LinkedIn Insight": "snap.licdn.com",
-        "Twitter Pixel": "static.ads-twitter.com",
-        "Segment.io": "cdn.segment.com",
-        "Tealium": "tags.tiqcdn.com",
-    }
-
-    # Check for technologies in the rendered HTML
-    for script in soup.find_all("script", src=True):
-        script_src = script["src"]
-        for tech, keyword in technologies.items():
-            if keyword in script_src:
-                detected_technologies[tech] = "Detected"
-
-    # Save to history
-    scraping_history.append({"url": url, "detected_technologies": detected_technologies})
-
-    return detected_technologies
 
 @app.get("/scrape", response_model=ScrapeResponse)
 def scrape(url: str):
@@ -93,19 +82,10 @@ def scrape(url: str):
         "detected_technologies": detected_technologies
     }
 
-@app.get("/history")
-def get_history():
-    return {"history": scraping_history}
-
-from fastapi.responses import JSONResponse
-
-@app.api_route("/", methods=["GET", "HEAD"])
+@app.get("/")
 def home():
-    return JSONResponse(content={"message": "API is running!"})
-
-import os
+    return {"message": "API is running!"}
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.environ.get("PORT", 8000))  # Default to 8000 if no PORT is set
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
