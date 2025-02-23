@@ -6,10 +6,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# Enable CORS (Required for frontend to talk to backend)
+# Enable CORS to allow frontend requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Replace "*" with your frontend URL for better security
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -24,6 +24,7 @@ def scrape_technologies(url: str):
     response = requests.get(url, headers=headers)
     detected_technologies = {}
 
+    # Example detection logic
     if "Google Tag Manager" in response.text:
         detected_technologies["Google Tag Manager"] = "Detected"
     if "Google Analytics" in response.text:
