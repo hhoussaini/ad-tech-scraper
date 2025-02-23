@@ -9,11 +9,14 @@
             font-family: Arial, sans-serif;
             margin: 20px;
             text-align: center;
+            background-color: #f9f9f9;
         }
         input {
             width: 300px;
             padding: 10px;
             margin: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
         }
         button {
             padding: 10px 20px;
@@ -22,6 +25,7 @@
             color: white;
             border: none;
             border-radius: 5px;
+            transition: 0.3s;
         }
         button:hover {
             background-color: #0056b3;
@@ -29,7 +33,7 @@
         .container {
             max-width: 600px;
             margin: auto;
-            background: #f4f4f4;
+            background: #ffffff;
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
@@ -40,7 +44,7 @@
             padding: 0;
         }
         li {
-            background: #ffffff;
+            background: #f1f1f1;
             padding: 10px;
             margin: 5px 0;
             border-radius: 5px;
@@ -52,21 +56,17 @@
         }
     </style>
     <script>
-        const API_BASE_URL = "https://ad-tech-scraper.onrender.com"; // Replace with your actual backend URL
+        const API_BASE_URL = "https://ad-tech-scraper.onrender.com"; // Replace with your backend URL
 
         async function scrapeURL() {
             const url = document.getElementById("urlInput").value;
-            if (!url) {
-                alert("Please enter a URL to scrape.");
-                return;
-            }
             document.getElementById("results").innerHTML = "<p>Loading...</p>";
 
             try {
                 const response = await fetch(`${API_BASE_URL}/scrape?url=${encodeURIComponent(url)}`);
-                if (!response.ok) throw new Error("Failed to scrape data.");
+                if (!response.ok) throw new Error("Failed to scrape");
                 const data = await response.json();
-
+                
                 let resultDiv = document.getElementById("results");
                 resultDiv.innerHTML = `<h3>Scraped Data for ${url}</h3>`;
 
@@ -82,6 +82,7 @@
                     resultDiv.appendChild(ul);
                 }
 
+                loadHistory();  // Reload history after successful scraping
             } catch (error) {
                 document.getElementById("results").innerHTML = `<p style='color:red;'>Error: ${error.message}</p>`;
             }
@@ -90,7 +91,7 @@
         async function loadHistory() {
             try {
                 const response = await fetch(`${API_BASE_URL}/history`);
-                if (!response.ok) throw new Error("Failed to fetch history.");
+                if (!response.ok) throw new Error("Failed to fetch history");
                 const data = await response.json();
 
                 let historyDiv = document.getElementById("history");
