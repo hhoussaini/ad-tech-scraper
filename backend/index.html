@@ -4,11 +4,123 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tech Stack Scraper</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            text-align: center;
+        }
+        input {
+            width: 300px;
+            padding: 10px;
+            margin: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #f4f4f4;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        ul {
+            text-align: left;
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background: #ffffff;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
+        }
+        #results, #history {
+            margin-top: 20px;
+            text-align: left;
+        }
+    </style>
     <script>
-        const API_BASE_URL = "https://ad-tech-scraper.onrender.com"; // Your actual backend URL
+        const API_BASE_URL = "https://ad-tech-scraper.onrender.com"; // Replace with your actual backend URL
+
+        async function scrapeURL() {
+            const url = document.getElementById("urlInput").value;
+            if (!url) {
+                alert("Please enter a URL to scrape.");
+                return;
+            }
+            document.getElementById("results").innerHTML = "<p>Loading...</p>";
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/scrape?url=${encodeURIComponent(url)}`);
+                if (!response.ok) throw new Error("Failed to scrape data.");
+                const data = await response.json();
+
+                let resultDiv = document.getElementById("results");
+                resultDiv.innerHTML = `<h3>Scraped Data for ${url}</h3>`;
+
+                if (!data.detected_technologies || Object.keys(data.detected_technologies).length === 0) {
+                    resultDiv.innerHTML += "<p>No technologies detected.</p>";
+                } else {
+                    let ul = document.createElement("ul");
+                    for (const [tech, status] of Object.entries(data.detected_technologies)) {
+                        let li = document.createElement("li");
+                        li.innerHTML = `<strong>${tech}:</strong> ${status}`;
+                        ul.appendChild(li);
+                    }
+                    resultDiv.appendChild(ul);
+                }
+
+            } catch (error) {
+                document.getElementById("results").innerHTML = `<p style='color:red;'>Error: ${error.message}</p>`;
+            }
+        }
+
+        async function loadHistory() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/history`);
+                if (!response.ok) throw new Error("Failed to fetch history.");
+                const data = await response.json();
+
+                let historyDiv = document.getElementById("history");
+                historyDiv.innerHTML = "<h3>Scraping History</h3>";
+
+                if (!data.history || data.history.length === 0) {
+                    historyDiv.innerHTML += "<p>No history available.</p>";
+                } else {
+                    data.history.forEach(entry => {
+                        let div = document.createElement("div");
+                        div.innerHTML = `<strong>${entry.url}</strong>: ${JSON.stringify(entry.detected_technologies)}`;
+                        historyDiv.appendChild(div);
+                    });
+                }
+
+            } catch (error) {
+                document.getElementById("history").innerHTML = `<p style='color:red;'>Error: ${error.message}</p>`;
+            }
+        }
+
+        window.onload = loadHistory;
     </script>
 </head>
 <body>
-    <h1>Welcome to the Tech Stack Scraper</h1>
+    <div class="container">
+        <h1>Ad Tech & Martech Stack Scraper</h1>
+        <input type="text" id="urlInput" placeholder="Enter website URL">
+        <button onclick="scrapeURL()">Scrape</button>
+        <div id="results"></div>
+        <div id="history"></div>
+    </div>
 </body>
 </html>
