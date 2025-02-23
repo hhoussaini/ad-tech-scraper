@@ -71,4 +71,11 @@ def scrape_technologies(url: str):
 @app.get("/scrape", response_model=ScrapeResponse)
 def scrape(url: str):
     detected_technologies = scrape_technologies(url)
-    return {"url": url, "detected_technologie
+    return {
+        "url": url,
+        "detected_technologies": detected_technologies
+    }
+
+@app.get("/")
+def home():
+    return {"message": "API is running!"}
