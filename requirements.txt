@@ -4,3 +4,4 @@ requests
 beautifulsoup4
 selenium
 chromedriver-autoinstaller
+pip>=25.0.1
