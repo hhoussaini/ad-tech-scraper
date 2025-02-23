@@ -22,13 +22,29 @@ class ScrapeResponse(BaseModel):
 def scrape_technologies(url: str):
     headers = {"User-Agent": "Mozilla/5.0"}
     response = requests.get(url, headers=headers)
+    soup = BeautifulSoup(response.text, "html.parser")
     detected_technologies = {}
 
-    # Example detection logic
-    if "Google Tag Manager" in response.text:
-        detected_technologies["Google Tag Manager"] = "Detected"
-    if "Google Analytics" in response.text:
-        detected_technologies["Google Analytics"] = "Detected"
+    # List of known scripts and tracking tools
+    technologies = {
+        "Google Tag Manager": "googletagmanager.com",
+        "Google Analytics": "analytics.js",
+        "Facebook Pixel": "connect.facebook.net/en_US/fbevents.js",
+        "Hotjar": "static.hotjar.com",
+        "Adobe Analytics": "omtrdc.net",
+        "HubSpot": "js.hs-scripts.com",
+        "LinkedIn Insight": "snap.licdn.com",
+        "Twitter Pixel": "static.ads-twitter.com",
+        "Segment.io": "cdn.segment.com",
+        "Tealium": "tags.tiqcdn.com",
+    }
+
+    # Check script tags for known tracking technologies
+    for script in soup.find_all("script", src=True):
+        script_src = script["src"]
+        for tech, keyword in technologies.items():
+            if keyword in script_src:
+                detected_technologies[tech] = "Detected"
 
     return detected_technologies
 
