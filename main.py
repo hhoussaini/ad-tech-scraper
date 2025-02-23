@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import requests
 from bs4 import BeautifulSoup
@@ -14,11 +14,17 @@ app = FastAPI()
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change this to your frontend URL for security
+    allow_origins=["*"],  # Change this to your frontend URL for better security
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Manually set the Chrome binary path for Render
+CHROME_BINARY_PATH = "/usr/bin/google-chrome-stable"
+
+# Store scraping history
+scraping_history = []
 
 class ScrapeResponse(BaseModel):
     url: str
@@ -27,20 +33,27 @@ class ScrapeResponse(BaseModel):
 # Function to set up Selenium WebDriver
 def get_driver():
     chromedriver_autoinstaller.install()  # Auto-download compatible ChromeDriver
+    
     chrome_options = Options()
+    chrome_options.binary_location = CHROME_BINARY_PATH  # Explicitly set the binary path
     chrome_options.add_argument("--headless")  # Run in headless mode (no GUI)
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+
     service = Service()  # Use default service
     driver = webdriver.Chrome(service=service, options=chrome_options)
     return driver
 
+# Function to scrape technologies
 def scrape_technologies(url: str):
-    driver = get_driver()
-    driver.get(url)
-    time.sleep(5)  # Allow JavaScript to load fully
-    page_source = driver.page_source
-    driver.quit()
+    try:
+        driver = get_driver()
+        driver.get(url)
+        time.sleep(5)  # Allow JavaScript to load fully
+        page_source = driver.page_source
+        driver.quit()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Selenium error: {str(e)}")
 
     soup = BeautifulSoup(page_source, "html.parser")
     detected_technologies = {}
@@ -66,6 +79,9 @@ def scrape_technologies(url: str):
             if keyword in script_src:
                 detected_technologies[tech] = "Detected"
 
+    # Save to history
+    scraping_history.append({"url": url, "detected_technologies": detected_technologies})
+
     return detected_technologies
 
 @app.get("/scrape", response_model=ScrapeResponse)
@@ -75,6 +91,10 @@ def scrape(url: str):
         "url": url,
         "detected_technologies": detected_technologies
     }
+
+@app.get("/history")
+def get_history():
+    return {"history": scraping_history}
 
 @app.get("/")
 def home():
